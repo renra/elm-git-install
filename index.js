@@ -333,7 +333,7 @@ function refIsBranch(branchSummary, tagSummary, ref) {
 function afterCheckout(url, repoPath, ref, opts, next) {
   const depElmJson = readElmJson(repoPath);
 
-  const verificationError = verifyPackageElmJson(depElmJson);
+  const verificationError = verifyBasicApplicationElmJson(depElmJson);
   if (verificationError !== '') {
     console.log(repoPath + ': Not valid elm json');
     console.log(verificationError);
@@ -343,7 +343,7 @@ function afterCheckout(url, repoPath, ref, opts, next) {
   opts['locked'][url] = ref;
   opts['handled'][url] = true;
 
-  const depSources = ['src']; // Can packages have source directories?
+  const depSources = depElmJson['source-directories'] || ['src'];
   const depGitDeps = depElmJson['git-dependencies'] || {};
 
   next = ((next) => {
@@ -468,6 +468,25 @@ function verifyElmJson(elmJson) {
 }
 
 function verifyApplicationElmJson(elmJson) {
+  const basicErr = verifyBasicApplicationElmJson(elmJson);
+  if (basicErr !== '') {
+    return basicErr
+  }
+
+  const gitDeps = elmJson['git-dependencies'];
+  if (!isObject(gitDeps)) {
+    return "'git-dependencies' field in elm-git.json has to be an object";
+  }
+
+  const gitDepsErr = checkAppGitDependencies(gitDeps);
+  if (gitDepsErr !== '') {
+    return gitDepsErr
+  }
+
+  return '';
+}
+
+function verifyBasicApplicationElmJson(elmJson) {
   if (elmJson.type !== "application") {
     return 'Type field of elm.json has to be \'application\'';
   }
@@ -480,16 +499,6 @@ function verifyApplicationElmJson(elmJson) {
   const depsErr = checkAppDependencies(deps);
   if (depsErr !== '') {
     return depsErr
-  }
-
-  const gitDeps = elmJson['git-dependencies'];
-  if (!isObject(gitDeps)) {
-    return "'git-dependencies' field in elm-git.json has to be an object";
-  }
-
-  const gitDepsErr = checkAppGitDependencies(gitDeps);
-  if (gitDepsErr !== '') {
-    return gitDepsErr
   }
 
   return '';
