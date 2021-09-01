@@ -177,8 +177,20 @@ function buildDependencyLock(elmJson) {
 }
 
 function buildUpdateChain(gitDeps, next) {
-  for (const url in gitDeps) {
-    const ref = gitDeps[url];
+  let urls = {};
+
+  for (const member in gitDeps) {
+    if(member == 'direct' || member == 'indirect') {
+      for (const url in gitDeps[member]) {
+        urls[url] = gitDeps[member][url];
+      }
+    } else {
+      urls[member] = gitDeps[member];
+    }
+  }
+
+  for (const url in urls) {
+    const ref = urls[url];
     const subPath = pathify(url);
     const repoPath = path.join(storagePath, subPath);
 
